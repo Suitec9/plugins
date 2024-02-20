@@ -2,11 +2,21 @@ import { cleanup } from "@testing-library/react";
 import * as matches from "@testing-library/jest-dom/matchers";
 import { Satellite } from "@junobuild/core";
 import { expect } from "vitest";
-import { afterEach, beforeEach } from "node:test";
 import "fake-indexeddb/auto";
-import { vi } from  "vitest";
+import { vi, afterEach, beforeEach } from  "vitest";
 
-vi.mock('@junobuild/core');
+
+
+vi.mock('@junobuild/core', () => ({
+    setDoc: vi.fn(),
+})); 
+
+vi.mock('../authContext', () => ({
+    subscribeCollection: vi.fn(),
+    unsubscribe: vi.fn()
+}));
+
+
 
 beforeEach(() => {
 
@@ -23,10 +33,5 @@ afterEach(() => {
     cleanup();
 });
 
-function setSatellitePrincipal(arg0: Satellite) {
-    throw new Error("Function not implemented.");
-}
-//import type { TransformOptions as JestTransformOptions } from "@jest/transform";
-//import { babelJest } from '@babel/preset-typescript'
+function setSatellitePrincipal(arg0: Satellite) {}
 
-//const  {getCacheKey} = babelJest.creatTansformer();

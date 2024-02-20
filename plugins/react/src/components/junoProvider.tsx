@@ -1,7 +1,7 @@
 import user from "../hooks/useAuth";
 import React from "react";
 
-interface junoProviderProps {
+export interface junoProviderProps {
    satelliteId: string;
    children: React.ReactNode;
 }

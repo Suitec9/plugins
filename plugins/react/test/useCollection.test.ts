@@ -1,83 +1,194 @@
-import {renderHook} from "@testing-library/react";
-import { test,  expect, vi } from "vitest";
+import {renderHook, act } from "@testing-library/react";
+import { describe,  expect, vi, it} from "vitest";
 import useCollection from "../src/hooks/useCollection";
-import useJuno from "../src/hooks/useJuno";
-
-test('useCollection hook should subscribe and Load', () => {
-
-  // Simulate usage by rendering the hook
-  const { result } = renderHook(() => useCollection('yourCollectionName'));
-
+import { error } from "console";
   // Assert that the hook subscribes to the collection
-  // You can use your own custom assertions based on the behavior of your subscription mechanism
-  // For example:
-  expect(result.current.isLoading).toBe(true); // Simulate loading state
-  // ... more assertions based on your specific subscription mechanism
+describe('subscribeCollection', () => {
+    it('calls juno.subscribeCollection on mount', async () => {
+
+        const juno = {
+            subscribeCollection: vi.fn()
+        };
+
+        const subscribe = vi.fn();
+        vi.spyOn(juno, 'subscribeCollection').mockReturnValue(subscribe);
+
+       const { unmount } = renderHook(() => useCollection('post'));
+       // Simulate unmounting the component
+        expect(juno.subscribeCollection).toHaveBeenCalledWith('post', expect.any(() => { juno }));
+
+        act(() => {
+            unmount()
+        })
+        expect(subscribe).toHaveBeenCalled();
+    });
+
+    it('updates Docs when receiving new data', async () => {
+
+        //const docs = [];
+        const { result } =  renderHook(() => useCollection('post'))
+
+        try {
+            renderHook(() => useCollection('post')).result.current.docs;
+        } catch {
+            error('not correct')
+        }
+
+
+        newFunction(result);
+
+        expect(result.current.docs).toEqual([{id: 1}]);
+
+    });
+     // Assert that the document is added
+    describe('addDoc', () => {
+        it('adds doc to docs array', () => {
+
+            const { result } = renderHook(() => useCollection('post'));
+
+            act(() => {
+                result.current.addDoc({
+                    id: 1, text: 'Hello world',
+                    data: undefined
+                });   
+            });
+            expect(result.current.docs).toEqual([{
+                id: 1, text: 'Hello world', data: undefined
+            }]);
+        });  
+    });
+
+    it('calls setDoc with newDocs', () => {
+
+        const juno = {
+            setDoc: vi.fn()
+        }
+
+        const setDoc = vi.fn();
+        vi.spyOn(juno, 'setDoc').mockReturnValue(juno);
+
+        const { result } = renderHook(() => useCollection('post'));
+
+        act(() => {
+            result.current.addDoc({
+                collection: "post",
+                doc: {
+                    key: expect.any(String),
+                    data: {
+                        id: 1
+                    }
+                },
+                data: undefined
+            })
+        });
+
+        expect(setDoc).toHaveBeenCalledWith({
+            collection: "post",
+            doc: {
+                key: expect.any(String),
+                data: {
+                    id: 1
+                }
+            }
+        });
+    });
+
+    // Simulate updating a document
+    describe('updatedDoc', () => {
+        it('updates target doc in docs array', () => {
+
+            const { result } = renderHook(() => useCollection('post'));
+
+            act(() => {
+                result.current.addDoc({id:1, text: 'Original', data: undefined})
+            });
+
+            act(() => {
+                result.current.updatedDoc('1', { text: 'updated' });
+            });
+
+            expect(result.current.docs).toEqual([{
+                id: 1,
+                text: 'updated',
+                data: undefined
+            }]);
+        });
+
+        // Assert that the document is updated
+        it('calls setDoc with doc updates', () => {
+
+            const juno = {
+                setDoc: vi.fn()
+            }
+            const setDoc = vi.fn();
+            vi.spyOn(juno, 'setDoc').mockReturnValue(setDoc);
+
+            const { result } = renderHook(() => useCollection('post'));
+
+            act(() => {
+                result.current.updatedDoc('1',{text: 'updated'});
+            });
+
+            expect(setDoc).toBeCalledWith({
+                collection: 'post',
+                doc: {
+                    key: '1',
+                    data: {
+                        text: 'updated'
+                    }
+                }
+            });
+        });  
+    });
+    describe('docs', () => {
+
+        it('loads initial empty state', () => {
+
+            const { result } = renderHook(() => useCollection('post'));
+
+            expect(result.current.docs).toEqual([]);
+        });
+        
+        it('reflects realtime change', async () => {
+
+            const subscribe = vi.fn().mockImplementationOnce((_, callback) => {
+                callback([{id: 1}]);
+            });
+
+            const juno = {
+                subscribeCollection: vi.fn()
+            }
+
+            vi.spyOn(juno, 'subscribeCollection')
+              .mockReturnValue(subscribe);
+            
+            vi.useFakeTimers();
+
+            const { result } = renderHook(()=> useCollection('post'));
+
+            act(() => {
+                vi.advanceTimersByTime(100);
+            });
+
+            expect(result.current.docs).toEqual([{id: 1}]);
+
+            subscribe.mockImplementationOnce((_, callBack) => {
+                callBack([{id: 1}, {id: 2}]);
+            });
+
+            act(() => {
+                vi.useRealTimers()
+            });
+
+            expect(result.current.docs).toEqual([{id: 1}, {id: 2}]);
+        })
+    })
 });
 
-
-test('useCollection hook should subscribe to the collection', () => {
-    // Mock the subscribeCollection function
-    const subscribeCollectionMock = vi.fn();
-    vi.mock('yourAuthContextFile', () => ({
-      subscribeCollection: subscribeCollectionMock,
-    }));
-  
-    // Simulate usage by rendering the hook
-    const { result } = renderHook(() => useCollection('yourCollectionName'));
-  
-    // Assert that the hook subscribes to the collection
-    // You can use your own custom assertions based on the behavior of your subscription mechanism
-    // For example:
-    expect(subscribeCollectionMock).toHaveBeenCalled(); // Verify that subscribeCollection was called
-    // ... more assertions based on your specific subscription mechanism
-  });
-  
-  test('useCollection hook should unsubscribe from the collection', () => {
-    // Mock the unsubscribe function
-    const unsubscribeMock = vi.fn();
-   // const unsubscribe = useJuno
-    vi.mock('./useJuno', () => ({
-         unsubscribe:  useJuno(),
-      
-    }));
-  
-    // Simulate usage by rendering the hook
-    const { result, unmount } = renderHook(() => useCollection('yourCollectionName'));
-  
-    // Simulate unmounting the component
-    unmount();
-  
-    // Assert that the hook unsubscribes from the collection
-    // You can use your own custom assertions based on the behavior of your unsubscribe mechanism
-    // For example:
-    expect(unsubscribeMock).toHaveBeenCalled(); // Verify that unsubscribe was called on component unmount
-    // ... more assertions based on your specific unsubscribe mechanism
-  });
-
-
-test('useCollection hook should add documents', () => {
-  // Simulate usage by rendering the hook
-  const { result } = renderHook(() => useCollection('yourCollectionName'));
-
-  // Simulate adding a document
-  result.current.addDoc({ id: 'yourId', data: { yourData: 'yourValue' } });
-
-  // Assert that the document is added
-  expect(result.current.docs).toHaveLength(1); // Assuming the added document is reflected in the docs state
-  // ... more assertions based on your specific addDoc implementation
-});
-
-test('useCollection hook should update the documents', () => {
-  // Simulate usage by rendering the hook
-  const { result } = renderHook(() => useCollection('post'));
-
-  // Simulate updating a document
-  result.current.updatedDoc('yourDocumentId', { updatedField: 'newValue' });
-
-  // Assert that the document is updated
-  // You can use your own custom assertions based on the behavior of your updateDoc function
-  // For example:
-  expect(result.current.docs[0].updatedField).toBe('newValue'); // Assuming the document is updated correctly
-  // ... more assertions based on your specific updateDoc implementation
-});
+function newFunction(result: { current: {
+    [x: string]: any; docs: { [key: string]: any; data: any; }[]; isLoading: boolean; error: null; addDoc: (doc: { [key: string]: any; data: any; }) => void; updatedDoc: (id: string, updates: object) => void; 
+}; }) {
+    act(() => {
+        result.current.setDocs([{ id: 1 }]);
+    });
+}
